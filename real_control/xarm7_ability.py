@@ -105,7 +105,7 @@ class XArm7Ability:
 
         # Computation model
         urdf_base_path = (
-                Path(__file__).parent.parent / "assets/curobo/assets/urdf"
+                Path(__file__).parent.parent / "examples/assets/urdf"
         ).absolute()
         if self.is_right:
             robot_path = (

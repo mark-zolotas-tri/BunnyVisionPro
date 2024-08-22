@@ -5,6 +5,58 @@ from typing import List, Tuple
 import numpy as np
 
 
+@dataclasses.dataclass
+class SingleInitializationConfig:
+    robot_base_pose: np.ndarray
+    init_qpos: np.ndarray
+    joint_names: List[str]
+
+    def __post_init__(self):
+        self.init_qpos[:] = self.init_qpos.astype(np.float64)[:]
+        self.robot_base_pose[:] = self.robot_base_pose.astype(np.float64)[:]
+
+    def validate(self, dof: int):
+        if len(self.robot_base_pose) != 7:
+            raise ValueError(f"robot_base_pose should be a 7d vector")
+        if self.init_qpos.shape[0] != dof:
+            raise ValueError(
+                f"init_qpos[0] should be a {dof}d vector, the same dim as dof"
+            )
+        if len(self.joint_names) != dof:
+            raise ValueError(
+                f"joint_names[0] should be a {dof}d vector, the same dim as dof"
+            )
+
+    def get_joint_index_mapping(
+            self, server_side_joint_names
+    ) -> np.ndarray:
+        # Build index mapping.
+        # Note that different URDF parser of the same robot may result in different joint order,
+        # Especially for multi-finger robot which is a kinematic tree rather than a single kinematics chain
+        # lula_qpos[index_lula2optimizer] = retargeted_qpos
+        # server_side_qpos[index_server2client] = client_side_qpos
+        index_client2server = [
+            self.joint_names.index(name) for name in server_side_joint_names
+        ]
+        index_client2server = np.array(index_client2server, dtype=int)
+        return index_client2server
+
+    def to_dict(self):
+        return dict(
+            robot_base_pose=self.robot_base_pose.tolist(),
+            init_qpos=self.init_qpos.tolist(),
+            joint_names=self.joint_names,
+        )
+
+    @classmethod
+    def from_dict(cls, config):
+        return SingleInitializationConfig(
+            robot_base_pose=np.array(config["robot_base_pose"]),
+            init_qpos=np.array(config["init_qpos"]),
+            joint_names=config["joint_names"],
+        )
+
+
 class BimanualAlignmentMode(Enum):
     ALIGN_CENTER = 0
     ALIGN_LEFT = 1
